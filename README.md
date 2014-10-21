@@ -23,7 +23,8 @@ python -m dis test.py
              23 LOAD_CONST               3 (None)
              26 RETURN_VALUE
 ```
-Some concepts, Frame vs Function vs Code
+Frame vs Function vs Code
+====
 
 First of all, all three of these are PyObjects. They are closely related to each other. 
 Function is Code plus some closure, and Frame is the runtime instance of a function.
