@@ -101,6 +101,8 @@ does not need to worry about its globals.
 
 Frame is pretty much like the runtime representation of a Function.
 
+Python Internals
+=====
 
 LOAD_CONST - Loading up the code object that defines our function. (The actual opcodes that get executed for the function)
 
