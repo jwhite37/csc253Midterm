@@ -36,3 +36,5 @@ LOAD_CONST - Loading our constants via dictionary lookup.
 
 CALL FUNCTION - First calling macro PCALL(PCALL_ALL)  -no idea what this does yet...
 - calling call_function passing in the stack pointer and oparg of 2
+- PyCFunctions are wrapped callable functions (so wrappers for a c function) so we take the 'else' branch here.
+- PyMethod_Check = 'false' since our function isn't a PyMethodObject (It's a PyFunctionObject), so we go even further to the fast function call.
