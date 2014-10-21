@@ -34,7 +34,7 @@ STORE_NAME - Store the FunctionObject into the name (add) Locals is a dictionary
 LOAD_NAME - Loading our FunctionObject by dictionary lookup.
 LOAD_CONST - Loading our constants via dictionary lookup.
 
-CALL FUNCTION - First calling macro PCALL(PCALL_ALL)  -no idea what this does yet...
+CALL FUNCTION - First calling macro PCALL(PCALL_ALL)  - these macros only get used if we have CALLPROFILES enabled, this allows for storing function calls we've made before, this is disabled for us so I think we can ignore them.
 - calling call_function passing in the stack pointer and oparg of 2
 - PyCFunctions are wrapped callable functions (so wrappers for a c function) so we take the 'else' branch here.
 - PyMethod_Check = 'false' since our function isn't a PyMethodObject (It's a PyFunctionObject), so we go even further to the fast function call.
