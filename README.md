@@ -1,13 +1,13 @@
-Some Fancy Title
+A 5 Minute Tutorial on Python Function Calls
 =====
-Code Fragment
+This tutorial will give you a quick overview of how Python internally handles function calls. The below code is a simple example of how to define and call a function in Python.
 ``` Python
 def add(x, y):
     return x + y
 
 print add(1,2)
 ```
-Dissassembled Bytecode
+As we know all Python code is compiled into bytecode to be executed by the interpreter, the below gives this bytecode. Notice that the first opcode is loading up a code object, this in itself is another fragment of bytecode that will be passed into the evaluation function as the program is executed. More on frames, functions, and code is described below.
 ```
 python -m dis test.py
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
