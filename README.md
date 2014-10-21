@@ -28,6 +28,8 @@ Frame vs Function vs Code
 
 First of all, all three of these are PyObjects. They are closely related to each other. 
 Function is Code plus some closure, and Frame is the runtime instance of a function.
+What really gets executed at the end, is the Frame. Function is like a prototype of 
+Frame, and Frame is the instanciated version of Function.
 
 The most fundamental building block is the Code.
 It looks like this:
