@@ -59,7 +59,7 @@ Code in the source code is represented by this PyCodeObject.
 Notice that to PyCodeObject’s knowledge, there is nothing like global. All it knows at the moment is
 its local variables, even these local ones are not yet bound to some value, they are just symbols.
 
-The interesting part here is the PyCodeObject.co_code, which is the actual byte code of the add
+The interesting part here is the `PyCodeObject.co_code`, which is the actual byte code of the add
 function in the source.
 
 ```
@@ -94,7 +94,7 @@ typedef struct {
 } PyFunctionObject;
 ```
 
-Notice that here, func_global kicks in. Function knows what the global is to some Code. Code itself 
+Notice that here, `PyFunctionObject.func_global` kicks in. Function knows what the global is to some Code. Code itself 
 does not need to worry about its globals.  
 
 Frame is pretty much like the runtime representation of a Function.
