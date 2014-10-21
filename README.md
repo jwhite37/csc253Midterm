@@ -2,8 +2,8 @@ Some Fancy Title
 =====
 Code Fragment
 ```
-def add(num1, num2):
-    return num1 + num2
+def add(x, y):
+    return x + y
 
 print add(1,2)
 ```
