@@ -104,6 +104,13 @@ Frame is pretty much like the runtime representation of a Function.
 Python Internals
 =====
 
+Now that we have some background on Frames, Functions, and Code, let's take a look at how Python internally would execute our function definition and execution. This can really be broken up into two parts centering around the `MAKE_FUNCTION` and `CALL_FUNCTION` opcodes, which in our bytecode is neatly broken up corresponding to line 1 and 4 in the original Python code.
+
+```
+  1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
+              3 MAKE_FUNCTION            0
+              6 STORE_NAME               0 (add)
+```
 LOAD_CONST - Loading up the code object that defines our function. (The actual opcodes that get executed for the function)
 
 MAKE_FUNCTION - Going to funcobject.c :Mention something on garbage collection (possibly). Here we're creating a function object (using the code object we just retreived and the globals so the function can have access to any globals) and passing it back out to ceval to store after setting the Garbage Collection tracking for the object. Pushing that function object onto the value stack.
@@ -111,6 +118,19 @@ MAKE_FUNCTION - Going to funcobject.c :Mention something on garbage collection (
 - Possibly looking into the module thing a bit more here in funcobject.c
 
 STORE_NAME - Store the FunctionObject into the name (add) Locals is a dictionary so we can easily store this reference in the locals with name 'add', which is one of the names from our code object.
+
+So now we're left with our code object representing the byte code of the functions internal execution on top of the value stack, now it's time to actually execute the function passing in our parameters.
+
+```
+  4           9 LOAD_NAME                0 (add)
+             12 LOAD_CONST               1 (1)
+             15 LOAD_CONST               2 (2)
+             18 CALL_FUNCTION            2
+             21 PRINT_ITEM
+             22 PRINT_NEWLINE
+             23 LOAD_CONST               3 (None)
+             26 RETURN_VALUE
+```
 
 LOAD_NAME - Loading our FunctionObject by dictionary lookup.
 LOAD_CONST - Loading our constants via dictionary lookup.
