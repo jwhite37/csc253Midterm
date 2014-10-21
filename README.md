@@ -36,5 +36,3 @@ LOAD_CONST - Loading our constants via dictionary lookup.
 
 CALL FUNCTION - First calling macro PCALL(PCALL_ALL)  -no idea what this does yet...
 - calling call_function passing in the stack pointer and oparg of 2
-- 
-
