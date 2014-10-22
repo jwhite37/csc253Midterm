@@ -138,6 +138,7 @@ The implementation of `call_function` can be found on line 4062 of ceval.c, firs
    PyObject *func = *pfunc;
 ```
 `TODO: EXPLAIN THESE THINGS UP HERE?`
+
 Python does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. All of these parameters are defined in the following way.
 
 
