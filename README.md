@@ -125,12 +125,19 @@ So now we're left with our Function Oblect on top of the value stack, now it's t
              23 LOAD_CONST               3 (None)
              26 RETURN_VALUE
 ```
+The first three opcodes being processed by the interpreter are pretty straight foward, in short we're loading our Function Object and two Integer Objects onto the stack so we can execute the function with them.
 
-LOAD_NAME - Loading our FunctionObject by dictionary lookup.
-LOAD_CONST - Loading our constants via dictionary lookup.
+The main interesting bit of the above is in executing `CALL_FUNCTION` when the following call `x = call_function(&sp, oparg);` is made. Notice that we pass in the current stack pointer from the executing frame by reference, this will come into play later on.
 
-CALL FUNCTION - First calling macro PCALL(PCALL_ALL)  - these macros only get used if we have CALLPROFILES enabled, this allows for storing function calls we've made before, this is disabled for us so I think we can ignore them.
-- calling call_function passing in the stack pointer and oparg of 2
-- PyCFunctions are wrapped callable functions (so wrappers for a c function) so we take the 'else' branch here.
-- PyMethod_Check = 'false' since our function isn't a PyMethodObject (It's a PyFunctionObject), so we go even further to the fast function call.
-- the fast_function grabs the code object, globals, and defaults (I don't think we have defaults in this one), need to figure out co->co flags.
+The implementation of `call_function` can be found on line 4062 of ceval.c, first we're defining some values.
+```
+   int na = oparg & 0xff;
+   int nk = (oparg>>8) & 0xff;
+   int n = na + 2 * nk;
+   PyObject **pfunc = (*pp_stack) - n - 1;
+   PyObject *func = *pfunc;
+```
+`TODO: EXPLAIN THESE THINGS UP HERE?`
+Python does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. All of these parameters are defined in the following way.
+
+
