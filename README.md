@@ -130,7 +130,7 @@ The first three opcodes being processed by the interpreter are pretty straight f
 The main interesting bit of the above is in executing `CALL_FUNCTION` when the following call `x = call_function(&sp, oparg);` is made. Notice that we pass in the current stack pointer from the executing frame by reference, this will come into play later on.
 
 The implementation of `call_function` can be found on line 4062 of ceval.c, first we're defining some values.
-```
+``` C
    int na = oparg & 0xff;
    int nk = (oparg>>8) & 0xff;
    int n = na + 2 * nk;
