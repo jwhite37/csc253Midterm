@@ -58,11 +58,13 @@ typedef struct {
 } PyCodeObject;
 ```
 Code in the source code is represented by this PyCodeObject. 
-Notice that to PyCodeObject’s knowledge, there is nothing like global. All it knows at the moment is
-its local variables, even these local ones are not yet bound to some value, they are just symbols.
+Notice that to PyCodeObject’s knowledge, there is nothing like global nor closure. All it knows at 
+the moment isits local variables, even these local ones are not yet bound to some value, they are 
+just symbols.
 
-The interesting part here is the `PyCodeObject.co_code`, which is the actual byte code of the add
-function in the source.
+The interesting part here is the `PyCodeObject.co_code`, which, in our case,is the actual byte code
+of the add function. More precisely, the `co_varnames` are local symbols ( not necessaraly bound ).
+In our case are `x` and `y`. 
 
 ```
           0 LOAD_FAST           0 (0)
@@ -72,10 +74,28 @@ function in the source.
 ```
 
 The concept of Function builds upon the concept of Code. It is equivalently Code plus the context
-in which it is created. By context, I really mean func\_closure and func\_global. Notice though, 
-if we do not return function as a symbol, then the func\_closure is `NULL`. Only when we return 
-function as a symbol (variable you may say), the func\_closure will be set by the python bytecode 
-MAKE_CLOSURE. 
+in which it is created. By context, I really mean `func\_closure` and `func\_globals`. Notice though, 
+if we do not write nested `def some_function_name():` in the source, the `func_closure` is simply `NULL`.
+However, when we have nested function and have function as return value, we will then invoke `MAKE_CLOSURE`
+to set the `func_closure` so as to remember the context in which the returned function is created. 
+
+For instance, here is a block of code where the `fun` inside `f_factory` is returned, the `fun` here 
+will have its `fun.func_closure` set with tuple `(x, y, z)` to the value when `fun` is created. 
+
+```
+def add(x, y):
+    return x + y
+
+def f_factory(x, y):
+    z = x*y
+    def fun():
+        return add(x, y) + z
+    return fun
+
+x = f_factory(1,3)
+y = f_factory(2,3)
+print x(), y()
+```
 
 Therefore, please remember that:
 Function = Code + func\_closure + func\_global
@@ -105,7 +125,7 @@ typedef struct {
 Notice that here, `PyFunctionObject.func_global` kicks in. Function knows what the global is to some Code. Code itself 
 does not need to worry about its globals.  
 
-Frame is pretty much like the runtime representation of a Function.
+Frame is pretty much like the Functions and their contexts all together as a whole that gets executed by the Python VM. 
 
 Python Internals
 =====
