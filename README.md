@@ -96,10 +96,14 @@ typedef struct {
 } PyFunctionObject;
 ```
 
+`TODO: PyFunctionObject.func_closure is set to NULL at creation time, which is a little bit confusing`
+
 Notice that here, `PyFunctionObject.func_global` kicks in. Function knows what the global is to some Code. Code itself 
 does not need to worry about its globals.  
 
 Frame is pretty much like the runtime representation of a Function.
+
+`TODO: Elaborate on this Frame idea.`
 
 Python Internals
 =====
