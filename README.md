@@ -71,8 +71,14 @@ function in the source.
           7 RETURN_VALUE
 ```
 
-The concept of Function builds upon the concept of Code. It is equivalently Code plus Closure.
-(i.e. Function = Code + Closure).
+The concept of Function builds upon the concept of Code. It is equivalently Code plus the context
+in which it is created. By context, I really mean func\_closure and func\_global. Notice though, 
+if we do not return function as a symbol, then the func\_closure is `NULL`. Only when we return 
+function as a symbol (variable you may say), the func\_closure will be set by the python bytecode 
+MAKE_CLOSURE. 
+
+Therefore, please remember that:
+Function = Code + func\_closure + func\_global
 
 It looks like this:
 ``` C++
