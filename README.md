@@ -168,7 +168,7 @@ The implementation of `call_function` can be found on line 4062 of ceval.c, firs
 Python does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. All of these parameters are defined in the following way.
 
 `TODO: fast_function, need to truncate this and explain, but I beleive this is our path to creating the new frame to execute`
-```
+``` C
     if (argdefs == NULL && co->co_argcount == n && nk==0 &&
         co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)) {
         PyFrameObject *f;
