@@ -96,14 +96,10 @@ typedef struct {
 } PyFunctionObject;
 ```
 
-`TODO: PyFunctionObject.func_closure is set to NULL at creation time, which is a little bit confusing`
-
 Notice that here, `PyFunctionObject.func_global` kicks in. Function knows what the global is to some Code. Code itself 
 does not need to worry about its globals.  
 
 Frame is pretty much like the runtime representation of a Function.
-
-`TODO: Elaborate on this Frame idea.`
 
 Python Internals
 =====
@@ -145,4 +141,41 @@ The implementation of `call_function` can be found on line 4062 of ceval.c, firs
 
 Python does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. All of these parameters are defined in the following way.
 
+`TODO: fast_function, need to truncate this and explain, but I beleive this is our path to creating the new frame to execute`
+```
+    if (argdefs == NULL && co->co_argcount == n && nk==0 &&
+        co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)) {
+        PyFrameObject *f;
+        PyObject *retval = NULL;
+        PyThreadState *tstate = PyThreadState_GET();
+        PyObject **fastlocals, **stack;
+        int i;
 
+        PCALL(PCALL_FASTER_FUNCTION);
+        assert(globals != NULL);
+        /* XXX Perhaps we should create a specialized
+           PyFrame_New() that doesn't take locals, but does
+           take builtins without sanity checking them.
+        */
+        assert(tstate != NULL);
+        f = PyFrame_New(tstate, co, globals, NULL);
+        if (f == NULL)
+            return NULL;
+
+        fastlocals = f->f_localsplus;
+        stack = (*pp_stack) - n;
+
+        for (i = 0; i < n; i++) {
+            Py_INCREF(*stack);
+            fastlocals[i] = *stack++;
+        }
+        retval = PyEval_EvalFrameEx(f,0);
+        ++tstate->recursion_depth;
+        Py_DECREF(f);
+        --tstate->recursion_depth;
+        return retval;
+```
+
+So we've executed the new frame and get our result as a PyObject*, push that onto the value stack. Also note that we set the main frames `stack_pointer` to the returned `sp` that was passed by reference into the `call_function` method.
+
+Following this we execute the remaining opcodes, which are fairly straight forward and not particularly interesting when it comes to function calls. We print out the value, load nothing onto the value stack and exit the frame!
