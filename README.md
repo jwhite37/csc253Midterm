@@ -1,13 +1,15 @@
 A 5 Minute Tutorial on Python Function Calls
 =====
-This tutorial will give you a quick overview of how Python internally handles function calls. The below code is a simple example of how to define and call a function in Python.
+This tutorial gives you a quick overview of how Python internally handles function calls.
+
+The python source we are going to examine is:
 ``` Python
 def add(x, y):
     return x + y
 
 print add(1,2)
 ```
-As we know all Python code is compiled into bytecode to be executed by the interpreter, the below gives this bytecode. Notice that the first opcode is loading up a code object, this in itself is another fragment of bytecode that will be passed into the evaluation function as the program is executed. More on frames, functions, and code is described below.
+Correspoinding bytecode for the above source is:
 ```
 python -m dis test.py
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
@@ -23,6 +25,21 @@ python -m dis test.py
              23 LOAD_CONST               3 (None)
              26 RETURN_VALUE
 ```
+
+Notice that the first bytecode (`0 LOAD_CONST`) loads an code object in. What
+gets loaded is the code object of the `add` function in the python source.
+
+The disassembled bytecode of that code object is:
+```
+          0 LOAD_FAST           0 (0)
+          3 LOAD_FAST           1 (1)
+          6 BINARY_ADD
+          7 RETURN_VALUE
+```
+
+Python interpreter evaluates frame, which is something sort of like a instanciated function.
+Function always have a code part in it. 
+
 Frame vs Function vs Code
 ====
 
