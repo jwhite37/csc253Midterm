@@ -74,7 +74,7 @@ In our case are `x` and `y`.
 ```
 
 The concept of Function builds upon the concept of Code. It is equivalently Code plus the context
-in which it is created. By context, I really mean `func\_closure` and `func\_globals`. Notice though, 
+in which it is created. By context, I really mean `func_closure` and `func_globals`. Notice though, 
 if we do not write nested `def some_function_name():` in the source, the `func_closure` is simply `NULL`.
 However, when we have nested function and have function as return value, we will then invoke `MAKE_CLOSURE`
 to set the `func_closure` so as to remember the context in which the returned function is created. 
@@ -98,7 +98,7 @@ print x(), y()
 ```
 
 Therefore, please remember that:
-Function = Code + func\_closure + func\_global
+`Function = Code + func_closure + func_global`
 
 It looks like this:
 ``` C++
@@ -139,7 +139,7 @@ Now that we have some background on Frames, Functions, and Code, let's take a lo
 ```
 We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, specifically the line `x = PyFunction_New(v, f->f_globals);`. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
 
-So now we're left with our Function Oblect on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
+So now we're left with our Function Object on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
 
 ```
   4           9 LOAD_NAME                0 (add)
@@ -173,7 +173,7 @@ In the call to `fast_function`, the interpreter first sets things up, commented 
     PyObject *globals = PyFunction_GET_GLOBALS(func);			//Get a pointer to the functions globals
 ```
 
-Once the `fast_function` method is setup, the code takes the very first branch since `argdefs == NULL && co->co_argcount == n && nk==0 && co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)` is a true statement, notice we're checking to see how many argumements the Code Object has against how many arguments are on the stack, this is what makes this execution 'fast' as everything that's needed to complete the call is actually already loaded up and ready to go.
+Once the `fast_function` method is setup, the code takes the very first branch since `argdefs == NULL && co->co_argcount == n && nk==0 && co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)` is a true statement. Notice we're checking to see how many arguments the Code Object has against how many arguments are on the stack; this is what makes this execution 'fast' as everything that's needed to complete the call is actually already loaded up and ready to go and we can access it all by pointer arithmatic.
 
 The interesting bit of code here remaining in this function is the following.
 ``` C
