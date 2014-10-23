@@ -29,7 +29,7 @@ Frame vs Function vs Code
 First of all, all three of these are PyObjects. They are closely related to each other. 
 Function is Code plus some closure, and Frame is the runtime instance of a function.
 What really gets executed at the end, is the Frame. Function is like a prototype of 
-Frame, and Frame is the instanciated version of Function.
+Frame, and Frame is the instantiated version of Function.
 
 The most fundamental building block is the Code.
 It looks like this:
@@ -58,8 +58,8 @@ typedef struct {
 } PyCodeObject;
 ```
 Code in the source code is represented by this PyCodeObject. 
-Notice that to PyCodeObject’s knowledge, there is nothing like global nor closure. All it knows at 
-the moment isits local variables, even these local ones are not yet bound to some value, they are 
+Notice that to the PyCodeObject’s knowledge, there is nothing like global nor closure. All it knows at 
+the moment is its local variables, even these local ones are not yet bound to some value, they are 
 just symbols.
 
 The interesting part here is the `PyCodeObject.co_code`, which, in our case,is the actual byte code
@@ -137,7 +137,7 @@ Now that we have some background on Frames, Functions, and Code, let's take a lo
               3 MAKE_FUNCTION            0
               6 STORE_NAME               0 (add)
 ```
-We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, specifically the line `x = PyFunction_New(v, f->f_globals);`. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're simply initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
+We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, specifically the line `x = PyFunction_New(v, f->f_globals);`. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
 
 So now we're left with our Function Oblect on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
 
@@ -193,9 +193,11 @@ The interesting bit of code here remaining in this function is the following.
         retval = PyEval_EvalFrameEx(f,0);
 ```
 
-The interpreter creates a brand new Frame Object using the Code Object and Globals. It then gets a pointer to the locals for the frame, and for each of the arguments on the stack (there are 2 in our case) places them into this locals array. Then the frame is evaluated using the Code Object, both arguments are added and the remaining value is left on top of the value stack. Notice that since we've passed in the address of the value stack from frame one all of this is done on the exact same value stack. The one opcode needing a bit of explanation here is the `RETURN_VALUE`, which grabs the top of the stack and executes a `fast_block_end` which kicks our result out to the caller. This is how the result of addition gets back out to our original frame.
+The interpreter creates a brand new Frame Object using the Code Object and Globals. It then gets a pointer to the locals for the frame, and for each of the arguments on the stack (there are 2 in our case) places them into this locals array. This action is what allows for the `LOAD_FAST` opcodes in the Code Object to do their thing, instead of a dictionary lookup we can make an atomic array read operation to get our arguments.
 
-So now we find ourselves back in the `call_function` routine after returning the result from `fast_function`, the Interpreter executes this bit of code below to clean up the arguments and function still sitting on the value stack since they're no longer needed by simply running the stack pointer back to the pointer to the function we created earlier.
+Then the frame is evaluated using the Code Object, both arguments are added and the remaining value is left on top of the value stack. Notice that since we've passed in the address of the value stack from frame one all of this is done on the exact same value stack. The one opcode needing a bit of explanation here is the `RETURN_VALUE`, which grabs the top of the stack and executes a `fast_block_end` which kicks our result out to the caller. This is how the result of addition gets back out to our original frame.
+
+So now we find ourselves back in the `call_function` routine after returning the result from `fast_function`, the Interpreter executes this bit of code below to clean up the arguments and function still sitting on the value stack since they're no longer needed by simply running the stack pointer back to the pointer to the function we created earlier. This is why it was important to pass in the `stack_pointer` by reference, it gives the ability to do the cleanup work prior to returning to the `CALL_FUNCTION` opcode execution.
 ```
     /* Clear the stack of the function object.  Also removes
        the arguments in case they weren't consumed already
@@ -208,4 +210,4 @@ So now we find ourselves back in the `call_function` routine after returning the
     return x;
 ```
 
-Following this we execute the remaining opcodes, which are fairly straight forward and not particularly interesting when it comes to function calls. We store our result onto the value stack, print out the value, load nothing onto the value stack and exit the frame!
+Following this we execute the remaining opcodes after resetting the `stack_pointer` in `ceval.c` to the one returned to us by the reference passing in `call_function`. The remaining opcodes are fairly straight forward and not particularly interesting when it comes to function calls. We store our result onto the value stack, print out the value, load nothing onto the value stack and exit the frame!
