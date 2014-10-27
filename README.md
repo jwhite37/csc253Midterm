@@ -48,9 +48,9 @@ Python interpreter makes a `PyCodeObject` and loads it to the value stack.
 Then it makes a `PyFunctionObject` out of the PyCodeObject on the value stack and leave a `PyFunctionObject` on 
 the value stack.
 
-The it binds the name 'add' with the `PyFunctionObject` and pops the `PyFunctionObject` off the value stack.
+Then it binds the name `add` with the `PyFunctionObject` and pops the `PyFunctionObject` off the value stack.
 
-At then moment of calling the function:
+At the moment of calling the function:
 ```
   4           9 LOAD_NAME                0 (add)
              12 LOAD_CONST               1 (1)
@@ -61,12 +61,12 @@ At then moment of calling the function:
              23 LOAD_CONST               3 (None)
              26 RETURN_VALUE
 ```
-The Python interpreter loads the function name ( in our case add ) and two argumeents ( in our case 1 and 2 ) to 
+The Python interpreter loads the function name ( in our case `add` ) and two argumeents ( in our case `1` and `2` ) to 
 the value satck. 
 
-Then the interpreter invoke `CALL_FUNCTION` to make a frame out of the `PyFunctionObject` with the name `add` 
-and evaluate it in `ceval.c`'s main loop. Which finishes by putting returned Objects on to value stack. In 
-our case `CALL_FUNCTION` puts an `PyIntObject` (Whose value slot set to 3) back to the value stack. 
+Then the interpreter follows `CALL_FUNCTION` to make a frame out of the `PyFunctionObject` with the name `add` 
+and evaluates it in `ceval.c`'s main loop. Which finishes by putting returned Objects on to the value stack. In 
+our case `CALL_FUNCTION` puts an `PyIntObject` (whose value slot is set to 3) back to the value stack. 
 
 The `PRINT_ITEM` bytecode tells the Python Interpreter to pop the `PyIntObject` off of the value stack and 
 print its value out. 
@@ -74,10 +74,8 @@ print its value out.
 Python interpreter loads in the `PyIntObject` to the value stack so that it could be used by the following 
 `RETURN_VALUE` bytecode.
 
-At last, the `RETURN_VALUE` bytecode instructs the Python interpreter to return the top of stack object(which in our case is the PyIntObject we loaded into the value stack from `LOAD_CONSTANT`) to the caller. 
-
-
-This can really be broken up into two parts centering around the `MAKE_FUNCTION` and `CALL_FUNCTION` opcodes, which in our bytecode is neatly broken up corresponding to line 1 and 4 in the original Python code.
+At last, the `RETURN_VALUE` bytecode instructs the Python interpreter to return the top of the stack object
+(which in our case is the PyIntObject we loaded in from `LOAD_CONSTANT`) to the caller. 
 
 The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_FUNCTION`. We are going to elaborate them individually.
 
@@ -89,7 +87,16 @@ The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_F
               3 MAKE_FUNCTION            0
               6 STORE_NAME               0 (add)
 ```
-We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, specifically the line `x = PyFunction_New(v, f->f_globals);`. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
+We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, whose logic is like this:
+``` C
+case MAKE_FUNCTION:
+     v = POP();	                                // PyCodeObject
+     x = PyFunction_New(v, f->f_globals);       // Make a function out of code object and global variables
+     ...                                        // Something irrelevant
+     PUSH(x);                                   // Put PyFunctionObject back to the value stack
+     break;
+```
+The line `x = PyFunction_New(v, f->f_globals);` is the most interesting one. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
 
 
 `CALL_FUNCTION` Walkthrough
@@ -111,13 +118,41 @@ The first three opcodes being processed by the interpreter are pretty straight f
 
 The main interesting bit of the above is in executing `CALL_FUNCTION` when the following call `x = call_function(&sp, oparg);` is made. Notice that we pass in the current stack pointer from the executing frame by reference, this will come into play later on.
 
-The implementation of `call_function` can be found on line 4062 of ceval.c, first we're defining some values, we've added in some comments to help you understand what's being initialized here inline with the actual elements being setup.
+The implementation of `call_function` is the following:
+```
+static PyObject *
+call_function(PyObject ***pp_stack, int oparg)
+{
+    int na = oparg & 0xff;
+    int nk = (oparg>>8) & 0xff;
+    int n = na + 2 * nk;
+    PyObject **pfunc = (*pp_stack) - n - 1;
+    PyObject *func = *pfunc;
+    PyObject *x, *w;
+    ...
+    if (PyCFunction_Check(func) && nk == 0) {
+        ...
+    } else {
+        ...
+        if (PyFunction_Check(func))
+            x = fast_function(func, pp_stack, n, na, nk);       // We end up calling this
+        else
+            x = do_call(func, pp_stack, na, nk);
+        READ_TIMESTAMP(*pintr1);
+        Py_DECREF(func);
+    }
+    ...                                                         // Some clean up 
+    }
+    return x;
+}
+```
+First we're defining some values, we've added in some comments to help you understand what's being initialized here inline with the actual elements being setup.
 ``` C
-   int na = oparg & 0xff; 			//Get the number of arguments
-   int nk = (oparg>>8) & 0xff;			//Keyword number occupies higher order bits, 0 in our case
-   int n = na + 2 * nk;				//n is the 'space' on the value stack that concerns this call
+   int na = oparg & 0xff; 			        //Get the number of arguments
+   int nk = (oparg>>8) & 0xff;			    //Keyword number occupies higher order bits, 0 in our case
+   int n = na + 2 * nk;				        //n is the 'space' on the value stack that concerns this call
    PyObject **pfunc = (*pp_stack) - n - 1;	//Get a pointer to the function object
-   PyObject *func = *pfunc;			//Retrieve the actual function object
+   PyObject *func = *pfunc;			        //Retrieve the actual function object
 ```
 
 The interpreter does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object since these are the most common calls made, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. 
@@ -126,7 +161,7 @@ In the call to `fast_function`, the interpreter first sets things up, commented 
 
 ``` C
     PyCodeObject *co = (PyCodeObject *)PyFunction_GET_CODE(func);	//Get a pointer to the Code Object
-    PyObject *globals = PyFunction_GET_GLOBALS(func);			//Get a pointer to the functions globals
+    PyObject *globals = PyFunction_GET_GLOBALS(func);			    //Get a pointer to the functions globals
 ```
 
 Once the `fast_function` method is setup, the code takes the very first branch since `argdefs == NULL && co->co_argcount == n && nk==0 && co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)` is a true statement. Notice we're checking to see how many arguments the Code Object has against how many arguments are on the stack; this is what makes this execution 'fast' as everything that's needed to complete the call is actually already loaded up and ready to go and we can access it all by pointer arithmatic.
@@ -134,9 +169,7 @@ Once the `fast_function` method is setup, the code takes the very first branch s
 The interesting bit of code here remaining in this function is the following.
 ``` C
         PyFrameObject *f;
-	.
-	.
-	.
+        ...
         f = PyFrame_New(tstate, co, globals, NULL);
 
         fastlocals = f->f_localsplus;
@@ -187,23 +220,14 @@ It looks like this:
 typedef struct {
     PyObject_HEAD
     int co_argcount;		/* #arguments, except *args */
-    int co_nlocals;		/* #local variables */
+    int co_nlocals;		    /* #local variables */
     int co_stacksize;		/* #entries needed for evaluation stack */
-    int co_flags;		/* CO_..., see below */
+    int co_flags;		    /* CO_..., see below */
     PyObject *co_code;		/* instruction opcodes */
     PyObject *co_consts;	/* list (constants used) */
     PyObject *co_names;		/* list of strings (names used) */
     PyObject *co_varnames;	/* tuple of strings (local variable names) */
-    PyObject *co_freevars;	/* tuple of strings (free variable names) */
-    PyObject *co_cellvars;      /* tuple of strings (cell variable names) */
-    /* The rest doesn't count for hash/cmp */
-    PyObject *co_filename;	/* string (where it was loaded from) */
-    PyObject *co_name;		/* string (name, for reference) */
-    int co_firstlineno;		/* first source line number */
-    PyObject *co_lnotab;	/* string (encoding addr<->lineno mapping) See
-				   Objects/lnotab_notes.txt for details. */
-    void *co_zombieframe;     /* for optimization only (see frameobject.c) */
-    PyObject *co_weakreflist;   /* to support weakrefs to code objects */
+    ...                     //Some other stuff
 } PyCodeObject;
 ```
 Code in the source code is represented by this PyCodeObject. 
