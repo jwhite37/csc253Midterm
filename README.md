@@ -3,7 +3,7 @@ A 5 Minute Tutorial on Python Function Calls
 This tutorial gives you a quick overview of how Python handles function calls.
 
 The python source we are going to examine is:
-``` Python
+```python
 def add(x, y):
     return x + y
 
@@ -27,7 +27,7 @@ python -m dis test.py
 ```
 
 The disassembled bytecode of the code object on line 1 above is:
-```
+```Python
           0 LOAD_FAST           0 (0)
           3 LOAD_FAST           1 (1)
           6 BINARY_ADD
@@ -37,7 +37,7 @@ The disassembled bytecode of the code object on line 1 above is:
 Byte Code Walkthrough
 =====
 Starting from the function definition:
-``` Python
+```
 python -m dis test.py
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
               3 MAKE_FUNCTION            0
@@ -51,7 +51,7 @@ the value stack.
 Then it binds the name `add` with the `PyFunctionObject` and pops the `PyFunctionObject` off the value stack.
 
 At the moment of calling the function:
-```
+```Python
   4           9 LOAD_NAME                0 (add)
              12 LOAD_CONST               1 (1)
              15 LOAD_CONST               2 (2)
@@ -82,13 +82,13 @@ The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_F
 `MAKE_FUNCTION` Walkthrough
 =====
 
-```
+```Python
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
               3 MAKE_FUNCTION            0
               6 STORE_NAME               0 (add)
 ```
 We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, whose logic is like this:
-``` C
+```C
 case MAKE_FUNCTION:
      v = POP();	                                // PyCodeObject
      x = PyFunction_New(v, f->f_globals);       // Make a function out of code object and global variables
@@ -119,7 +119,7 @@ The first three opcodes being processed by the interpreter are pretty straight f
 The main interesting bit of the above is in executing `CALL_FUNCTION` when the following call `x = call_function(&sp, oparg);` is made. Notice that we pass in the current stack pointer from the executing frame by reference, this will come into play later on.
 
 The implementation of `call_function` is the following:
-```
+```C
 static PyObject *
 call_function(PyObject ***pp_stack, int oparg)
 {
