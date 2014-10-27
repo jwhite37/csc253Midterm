@@ -27,7 +27,7 @@ python -m dis test.py
 ```
 
 The disassembled bytecode of the code object on line 1 above is:
-```Python
+```python
           0 LOAD_FAST           0 (0)
           3 LOAD_FAST           1 (1)
           6 BINARY_ADD
@@ -37,7 +37,7 @@ The disassembled bytecode of the code object on line 1 above is:
 Byte Code Walkthrough
 =====
 Starting from the function definition:
-```
+```python
 python -m dis test.py
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
               3 MAKE_FUNCTION            0
@@ -51,7 +51,7 @@ the value stack.
 Then it binds the name `add` with the `PyFunctionObject` and pops the `PyFunctionObject` off the value stack.
 
 At the moment of calling the function:
-```Python
+```python
   4           9 LOAD_NAME                0 (add)
              12 LOAD_CONST               1 (1)
              15 LOAD_CONST               2 (2)
@@ -82,7 +82,7 @@ The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_F
 `MAKE_FUNCTION` Walkthrough
 =====
 
-```Python
+```python
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
               3 MAKE_FUNCTION            0
               6 STORE_NAME               0 (add)
@@ -104,7 +104,7 @@ The line `x = PyFunction_New(v, f->f_globals);` is the most interesting one. Com
 
 So now we're left with our Function Object on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
 
-```
+```python
   4           9 LOAD_NAME                0 (add)
              12 LOAD_CONST               1 (1)
              15 LOAD_CONST               2 (2)
@@ -147,7 +147,7 @@ call_function(PyObject ***pp_stack, int oparg)
 }
 ```
 First we're defining some values, we've added in some comments to help you understand what's being initialized here inline with the actual elements being setup.
-``` C
+```C
    int na = oparg & 0xff; 			        //Get the number of arguments
    int nk = (oparg>>8) & 0xff;			    //Keyword number occupies higher order bits, 0 in our case
    int n = na + 2 * nk;				        //n is the 'space' on the value stack that concerns this call
@@ -159,7 +159,7 @@ The interpreter does a couple of checks immediately in order to find out if the 
 
 In the call to `fast_function`, the interpreter first sets things up, commented below.
 
-``` C
+```C
     PyCodeObject *co = (PyCodeObject *)PyFunction_GET_CODE(func);	//Get a pointer to the Code Object
     PyObject *globals = PyFunction_GET_GLOBALS(func);			    //Get a pointer to the functions globals
 ```
@@ -167,7 +167,7 @@ In the call to `fast_function`, the interpreter first sets things up, commented 
 Once the `fast_function` method is setup, the code takes the very first branch since `argdefs == NULL && co->co_argcount == n && nk==0 && co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)` is a true statement. Notice we're checking to see how many arguments the Code Object has against how many arguments are on the stack; this is what makes this execution 'fast' as everything that's needed to complete the call is actually already loaded up and ready to go and we can access it all by pointer arithmatic.
 
 The interesting bit of code here remaining in this function is the following.
-``` C
+```C
         PyFrameObject *f;
         ...
         f = PyFrame_New(tstate, co, globals, NULL);
@@ -187,7 +187,7 @@ The interpreter creates a brand new Frame Object using the Code Object and Globa
 Then the frame is evaluated using the Code Object, both arguments are added and the remaining value is left on top of the value stack. Notice that since we've passed in the address of the value stack from frame one all of this is done on the exact same value stack. The one opcode needing a bit of explanation here is the `RETURN_VALUE`, which grabs the top of the stack and executes a `fast_block_end` which kicks our result out to the caller. This is how the result of addition gets back out to our original frame.
 
 So now we find ourselves back in the `call_function` routine after returning the result from `fast_function`, the Interpreter executes this bit of code below to clean up the arguments and function still sitting on the value stack since they're no longer needed by simply running the stack pointer back to the pointer to the function we created earlier. This is why it was important to pass in the `stack_pointer` by reference, it gives the ability to do the cleanup work prior to returning to the `CALL_FUNCTION` opcode execution.
-```
+```C
     /* Clear the stack of the function object.  Also removes
        the arguments in case they weren't consumed already
        (fast_function() and err_args() leave them on the stack).
@@ -215,7 +215,7 @@ Frame, and Frame is the instantiated version of Function.
 
 The most fundamental building block is the Code.
 It looks like this:
-``` C++
+```C
 /* Bytecode object */
 typedef struct {
     PyObject_HEAD
@@ -239,7 +239,7 @@ The interesting part here is the `PyCodeObject.co_code`, which, in our case,is t
 of the add function. More precisely, the `co_varnames` are local symbols ( not necessaraly bound ).
 In our case are `x` and `y`. 
 
-```
+```python
           0 LOAD_FAST           0 (0)
           3 LOAD_FAST           1 (1)
           6 BINARY_ADD
@@ -255,7 +255,7 @@ to set the `func_closure` so as to remember the context in which the returned fu
 For instance, here is a block of code where the `fun` inside `f_factory` is returned, the `fun` here 
 will have its `fun.func_closure` set with tuple `(x, y, z)` to the value when `fun` is created. 
 
-```
+```python
 def add(x, y):
     return x + y
 
@@ -274,7 +274,7 @@ Therefore, please remember that:
 `Function = Code + func_closure + func_global`
 
 It looks like this:
-``` C++
+```C
 typedef struct {
     PyObject_HEAD
     PyObject *func_code;	/* A code object */
