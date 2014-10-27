@@ -26,10 +26,7 @@ python -m dis test.py
              26 RETURN_VALUE
 ```
 
-Notice that the first bytecode (`0 LOAD_CONST`) loads an code object in. What
-gets loaded is the code object of the `add` function in the python source.
-
-The disassembled bytecode of that code object is:
+The disassembled bytecode of the code object on line 1 above is:
 ```
           0 LOAD_FAST           0 (0)
           3 LOAD_FAST           1 (1)
@@ -37,11 +34,55 @@ The disassembled bytecode of that code object is:
           7 RETURN_VALUE
 ```
 
-
-Python Internals
+Byte Code Walkthrough
 =====
+Starting from the function definition:
+``` Python
+python -m dis test.py
+  1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
+              3 MAKE_FUNCTION            0
+              6 STORE_NAME               0 (add)
+```
+Python interpreter makes a `PyCodeObject` and loads it to the value stack. 
 
-Now that we have some background on Frames, Functions, and Code, let's take a look at how Python internally would execute our function definition and execution. This can really be broken up into two parts centering around the `MAKE_FUNCTION` and `CALL_FUNCTION` opcodes, which in our bytecode is neatly broken up corresponding to line 1 and 4 in the original Python code.
+Then it makes a `PyFunctionObject` out of the PyCodeObject on the value stack and leave a `PyFunctionObject` on 
+the value stack.
+
+The it binds the name 'add' with the `PyFunctionObject` and pops the `PyFunctionObject` off the value stack.
+
+At then moment of calling the function:
+```
+  4           9 LOAD_NAME                0 (add)
+             12 LOAD_CONST               1 (1)
+             15 LOAD_CONST               2 (2)
+             18 CALL_FUNCTION            2
+             21 PRINT_ITEM
+             22 PRINT_NEWLINE
+             23 LOAD_CONST               3 (None)
+             26 RETURN_VALUE
+```
+The Python interpreter loads the function name ( in our case add ) and two argumeents ( in our case 1 and 2 ) to 
+the value satck. 
+
+Then the interpreter invoke `CALL_FUNCTION` to make a frame out of the `PyFunctionObject` with the name `add` 
+and evaluate it in `ceval.c`'s main loop. Which finishes by putting returned Objects on to value stack. In 
+our case `CALL_FUNCTION` puts an `PyIntObject` (Whose value slot set to 3) back to the value stack. 
+
+The `PRINT_ITEM` bytecode tells the Python Interpreter to pop the `PyIntObject` off of the value stack and 
+print its value out. 
+
+Python interpreter loads in the `PyIntObject` to the value stack so that it could be used by the following 
+`RETURN_VALUE` bytecode.
+
+At last, the `RETURN_VALUE` bytecode instructs the Python interpreter to return the top of stack object(which in our case is the PyIntObject we loaded into the value stack from `LOAD_CONSTANT`) to the caller. 
+
+
+This can really be broken up into two parts centering around the `MAKE_FUNCTION` and `CALL_FUNCTION` opcodes, which in our bytecode is neatly broken up corresponding to line 1 and 4 in the original Python code.
+
+The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_FUNCTION`. We are going to elaborate them individually.
+
+`MAKE_FUNCTION` Walkthrough
+=====
 
 ```
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
@@ -49,6 +90,10 @@ Now that we have some background on Frames, Functions, and Code, let's take a lo
               6 STORE_NAME               0 (add)
 ```
 We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, specifically the line `x = PyFunction_New(v, f->f_globals);`. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
+
+
+`CALL_FUNCTION` Walkthrough
+=====
 
 So now we're left with our Function Object on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
 
