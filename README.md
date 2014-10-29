@@ -40,7 +40,7 @@ Starting from the function definition:
 ```python
 python -m dis test.py
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
-              3 MAKE_FUNCTION            0          //Elaborated in section MAKE_FUNCTION Walkthrough
+              3 MAKE_FUNCTION            0          //Elaborated in later section MAKE_FUNCTION Walkthrough
               6 STORE_NAME               0 (add)
 ```
 Python interpreter makes a `PyCodeObject` and loads it to the value stack. 
@@ -55,7 +55,7 @@ At the moment of calling the function:
   4           9 LOAD_NAME                0 (add)
              12 LOAD_CONST               1 (1)
              15 LOAD_CONST               2 (2)
-             18 CALL_FUNCTION            2          //Elaborated in section CALL_FUNCTION Walkthrough
+             18 CALL_FUNCTION            2          //Elaborated in later section CALL_FUNCTION Walkthrough
              21 PRINT_ITEM
              22 PRINT_NEWLINE
              23 LOAD_CONST               3 (None)
@@ -183,16 +183,15 @@ So now we find ourselves back in the `call_function` routine after returning the
 
 Following this we execute the remaining opcodes after resetting the `stack_pointer` in `ceval.c` to the one returned to us by the reference passing in `call_function`. The remaining opcodes are fairly straight forward and not particularly interesting when it comes to function calls. We store our result onto the value stack, print out the value, load nothing onto the value stack and exit the frame!
 
-
 Python interpreter evaluates frame, which is something sort of like a instanciated function.
 Function always have a code part in it. 
 
-Frame vs Function vs Code
-====
+Extended Discussion: PyFrameObject vs PyFunctionObject vs PyCodeObject
+======================================================================
 
 First of all, all three of these are PyObjects. They are closely related to each other. 
 Function is Code plus some closure, and Frame is the runtime instance of a function.
-What really gets executed at the end, is the Frame. Function is like a prototype of 
+What really gets executed at the end, is the Frame. Function is like a schema of 
 Frame, and Frame is the instantiated version of Function.
 
 The most fundamental building block is the Code.
@@ -201,13 +200,9 @@ It looks like this:
 /* Bytecode object */
 typedef struct {
     PyObject_HEAD
-    int co_argcount;		/* #arguments, except *args */
-    int co_nlocals;		    /* #local variables */
-    int co_stacksize;		/* #entries needed for evaluation stack */
-    int co_flags;		    /* CO_..., see below */
+    ...
     PyObject *co_code;		/* instruction opcodes */
-    PyObject *co_consts;	/* list (constants used) */
-    PyObject *co_names;		/* list of strings (names used) */
+    ...
     PyObject *co_varnames;	/* tuple of strings (local variable names) */
     ...                     //Some other stuff
 } PyCodeObject;
