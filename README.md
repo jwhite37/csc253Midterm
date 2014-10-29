@@ -105,11 +105,11 @@ The implementation of `call_function` is the following:
 static PyObject *
 call_function(PyObject ***pp_stack, int oparg)
 {
-    int na = oparg & 0xff;
-    int nk = (oparg>>8) & 0xff;
-    int n = na + 2 * nk;
-    PyObject **pfunc = (*pp_stack) - n - 1;
-    PyObject *func = *pfunc;
+    int na = oparg & 0xff; 			            //Get the number of arguments
+    int nk = (oparg>>8) & 0xff;			        //Keyword number occupies higher order bits, 0 in our case
+    int n = na + 2 * nk;				        //n is the 'space' on the value stack that concerns this call
+    PyObject **pfunc = (*pp_stack) - n - 1;	    //Get a pointer to the function object
+    PyObject *func = *pfunc;			        //Retrieve the actual function object
     PyObject *x, *w;
     ...
     if (PyCFunction_Check(func) && nk == 0) {
@@ -128,14 +128,8 @@ call_function(PyObject ***pp_stack, int oparg)
     return x;
 }
 ```
-First we're defining some values, we've added in some comments to help you understand what's being initialized here inline with the actual elements being setup.
-```C
-   int na = oparg & 0xff; 			        //Get the number of arguments
-   int nk = (oparg>>8) & 0xff;			    //Keyword number occupies higher order bits, 0 in our case
-   int n = na + 2 * nk;				        //n is the 'space' on the value stack that concerns this call
-   PyObject **pfunc = (*pp_stack) - n - 1;	//Get a pointer to the function object
-   PyObject *func = *pfunc;			        //Retrieve the actual function object
-```
+First we're defining some values, these values are used to figure out the position stack pointer should point to based on 
+number of arguments for the function object ( which in our case is the newly created 'add' `PyFunctionObject`)
 
 The interpreter does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object since these are the most common calls made, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. 
 
