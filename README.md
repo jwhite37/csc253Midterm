@@ -81,13 +81,7 @@ The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_F
 
 `MAKE_FUNCTION` Walkthrough
 =====
-
-```python
-  1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
-              3 MAKE_FUNCTION            0
-              6 STORE_NAME               0 (add)
-```
-We've seen the `LOAD_CONST` and `STORE_NAME` before, and these work the same way, loading a PyObject* onto the value stack and storing an object in a dictionary. The key to this entire process is the `MAKE_FUNCTION` opcode, whose logic is like this:
+The key to this entire process is the `MAKE_FUNCTION` opcode, whose logic is like this:
 ```C
 case MAKE_FUNCTION:
      v = POP();	                                // PyCodeObject
@@ -103,18 +97,6 @@ The line `x = PyFunction_New(v, f->f_globals);` is the most interesting one. Com
 =====
 
 So now we're left with our Function Object on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
-
-```python
-  4           9 LOAD_NAME                0 (add)
-             12 LOAD_CONST               1 (1)
-             15 LOAD_CONST               2 (2)
-             18 CALL_FUNCTION            2
-             21 PRINT_ITEM
-             22 PRINT_NEWLINE
-             23 LOAD_CONST               3 (None)
-             26 RETURN_VALUE
-```
-The first three opcodes being processed by the interpreter are pretty straight foward, in short we're loading our Function Object and two Integer Objects onto the stack so we can execute the function with them.
 
 The main interesting bit of the above is in executing `CALL_FUNCTION` when the following call `x = call_function(&sp, oparg);` is made. Notice that we pass in the current stack pointer from the executing frame by reference, this will come into play later on.
 
