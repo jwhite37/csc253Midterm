@@ -34,8 +34,8 @@ The disassembled bytecode of the code object on line 1 above is:
           7 RETURN_VALUE
 ```
 
-Byte Code Walkthrough
-=====
+Bytecode Walkthrough
+====================
 Starting from the function definition:
 ```python
 python -m dis test.py
@@ -80,7 +80,7 @@ At last, the `RETURN_VALUE` bytecode instructs the Python interpreter to return 
 The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_FUNCTION`. We are going to elaborate them individually.
 
 `MAKE_FUNCTION` Walkthrough
-=====
+===========================
 The key to this entire process is the `MAKE_FUNCTION` opcode, whose logic is like this:
 ```C
 case MAKE_FUNCTION:
@@ -94,7 +94,7 @@ The line `x = PyFunction_New(v, f->f_globals);` is the most interesting one. Com
 
 
 `CALL_FUNCTION` Walkthrough
-=====
+===========================
 
 So now we're left with our Function Object on top of the value stack, now it's time to actually execute the function passing in our parameters and do some work with it.
 
