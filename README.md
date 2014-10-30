@@ -1,15 +1,15 @@
-A 5 Minute Tutorial on Python Function Calls
+A Tutorial on Python Function Calls
 =====
 This tutorial gives you a quick overview of how Python handles function calls.
 
-The python source we are going to examine is:
+The Python program we are going to examine is:
 ```python
 def add(x, y):
     return x + y
 
 print add(1,2)
 ```
-Correspoinding bytecode for the above source is:
+Corresponding bytecode for the above source is:
 ```
 python -m dis test.py
   1           0 LOAD_CONST               0 (<code object add at 0x6ffffe2fa30, file "test.py", line 1>)
@@ -43,9 +43,9 @@ python -m dis test.py
               3 MAKE_FUNCTION            0          //Elaborated in later section MAKE_FUNCTION Walkthrough
               6 STORE_NAME               0 (add)
 ```
-Python interpreter makes a `PyCodeObject` and loads it to the value stack. 
+The Python interpreter makes a `PyCodeObject` and loads it to the value stack. 
 
-Then it makes a `PyFunctionObject` out of the PyCodeObject on the value stack and leave a `PyFunctionObject` on 
+Then it creates a `PyFunctionObject` out of the `PyCodeObject` on the value stack and leaves a `PyFunctionObject` on 
 the value stack.
 
 Then it binds the name `add` with the `PyFunctionObject` and pops the `PyFunctionObject` off the value stack.
@@ -64,20 +64,20 @@ At the moment of calling the function:
 The Python interpreter loads the function name ( in our case `add` ) and two argumeents ( in our case `1` and `2` ) to 
 the value satck. 
 
-Then the interpreter follows `CALL_FUNCTION` to make a frame out of the `PyFunctionObject` with the name `add` 
-and evaluates it in `ceval.c`'s main loop. Which finishes by putting returned Objects on to the value stack. In 
-our case `CALL_FUNCTION` puts an `PyIntObject` (whose value slot is set to 3) back to the value stack. 
+Then the interpreter follows `CALL_FUNCTION` to make a `PyFrameObject` out of the `PyFunctionObject` with the name `add` 
+and evaluates it in `ceval.c`'s main loop. The bytecode finishes by putting a returned Object on to the value stack. In 
+our case `CALL_FUNCTION` puts a `PyIntObject` (whose value slot is set to 3) on to the value stack. 
 
 The `PRINT_ITEM` bytecode tells the Python Interpreter to pop the `PyIntObject` off of the value stack and 
-print its value out. 
+print its value to standard output and `PRINT_NEWLINE` prints out a newline character. 
 
-Python interpreter loads in the `PyIntObject` to the value stack so that it could be used by the following 
+Python interpreter then loads in the `None` PyObject to the value stack so that it could be used by the following 
 `RETURN_VALUE` bytecode.
 
 At last, the `RETURN_VALUE` bytecode instructs the Python interpreter to return the top of the stack object
 (which in our case is the PyIntObject we loaded in from `LOAD_CONSTANT`) to the caller. 
 
-The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_FUNCTION`. We are going to elaborate them individually.
+The most interesting parts of the above bytecode are `MAKE_FUNCTION` and `CALL_FUNCTION`. We are going to elaborate on them individually below.
 
 `MAKE_FUNCTION` Walkthrough
 ===========================
@@ -86,11 +86,11 @@ The key to this entire process is the `MAKE_FUNCTION` opcode, whose logic is lik
 case MAKE_FUNCTION:
      v = POP();	                                // PyCodeObject
      x = PyFunction_New(v, f->f_globals);       // Make a function out of code object and global variables
-     ...                                        // Something irrelevant
+     ...                                        
      PUSH(x);                                   // Put PyFunctionObject back to the value stack
      break;
 ```
-The line `x = PyFunction_New(v, f->f_globals);` is the most interesting one. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded and the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
+The line `x = PyFunction_New(v, f->f_globals);` is the most interesting one. Combined with the Load and Store opcodes you can see right away due to how pythons internals are written what's happening, we're creating a Function Object using the Code Object we just loaded as well as the globals from the frame we're currently executing. You can see this functions full code in `Objects\funcobject.c` to get a full view of implementation, but overall we're initializing a Function Object with a pointer to the Code Object so we can at a later point actually execute the bytecode when calling the function.
 
 
 `CALL_FUNCTION` Walkthrough
@@ -128,10 +128,10 @@ call_function(PyObject ***pp_stack, int oparg)
     return x;
 }
 ```
-First we're defining some values, these values are used to figure out the position stack pointer should point to based on 
-number of arguments for the function object ( which in our case is the newly created 'add' `PyFunctionObject`)
+First we're defining some values, these values are used to figure out the position the stack pointer should point to based on
+number of arguments for the function object as well as getting a handle to our `PyFunctionObject`.
 
-The interpreter does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object since these are the most common calls made, our function is just a straight forward PyFunctionObject, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);`. 
+The interpreter does a couple of checks immediately in order to find out if the function is a Python wrapper for a c function or a Method object since these are the most common calls made, our function is just a straight forward `PyFunctionObject`, so we execute the branch of code that calls `x = fast_function(func, pp_stack, n, na, nk);` which is also in `ceval.c`. 
 
 In the call to `fast_function`, the interpreter first sets things up, commented below.
 
@@ -142,7 +142,7 @@ In the call to `fast_function`, the interpreter first sets things up, commented 
 
 Once the `fast_function` method is setup, the code takes the very first branch since `argdefs == NULL && co->co_argcount == n && nk==0 && co->co_flags == (CO_OPTIMIZED | CO_NEWLOCALS | CO_NOFREE)` is a true statement. Notice we're checking to see how many arguments the Code Object has against how many arguments are on the stack; this is what makes this execution 'fast' as everything that's needed to complete the call is actually already loaded up and ready to go and we can access it all by pointer arithmatic.
 
-The interesting bit of code here remaining in this function is the following.
+Now we get to the bit of code that actually executes our function.
 ```C
         PyFrameObject *f;
         ...
@@ -160,9 +160,11 @@ The interesting bit of code here remaining in this function is the following.
 
 The interpreter creates a brand new Frame Object using the Code Object and Globals. It then gets a pointer to the locals for the frame, and for each of the arguments on the stack (there are 2 in our case) places them into this locals array. This action is what allows for the `LOAD_FAST` opcodes in the Code Object to do their thing, instead of a dictionary lookup we can make an atomic array read operation to get our arguments.
 
-Then the frame is evaluated using the Code Object, both arguments are added and the remaining value is left on top of the value stack. Notice that since we've passed in the address of the value stack from frame one all of this is done on the exact same value stack. The one opcode needing a bit of explanation here is the `RETURN_VALUE`, which grabs the top of the stack and executes a `fast_block_end` which kicks our result out to the caller. This is how the result of addition gets back out to our original frame.
+Then the Frame Object is evaluated through calling the `PyEval_EvalFrameEx` method (which is the same method that's been evaluating the initial main Frame Object). Both arguments are added and the remaining value is left on top of the value stack through a `BINARY_ADD`. Notice that since we've passed in the address of the value stack from the initial frame all of this is done on the exact same value stack. What essentially is happening here is the main frame transfers control of the stack to the new frame, and once this second frame finishes it returns control of the stack with modifications from executing the function code to the initial frame.
 
-So now we find ourselves back in the `call_function` routine after returning the result from `fast_function`, the Interpreter executes this bit of code below to clean up the arguments and function still sitting on the value stack since they're no longer needed by simply running the stack pointer back to the pointer to the function we created earlier. This is why it was important to pass in the `stack_pointer` by reference, it gives the ability to do the cleanup work prior to returning to the `CALL_FUNCTION` opcode execution.
+The one opcode needing a bit of explanation here is the `RETURN_VALUE`, which grabs the top of the stack and executes a `fast_block_end` which kicks our result out to the caller. This is how the result of addition gets back out to our original frame.
+
+So now we find ourselves back in the `call_function` routine after returning the result from `fast_function`, the Interpreter executes this bit of code below to clean up the arguments and function still sitting on the value stack since they're no longer needed by simply running the stack pointer back to the pointer to the function we created earlier. This another reason why it was important to pass in the `stack_pointer` by reference, it gives the ability to do the cleanup work prior to returning to the `CALL_FUNCTION` opcode execution.
 ```C
     /* Clear the stack of the function object.  Also removes
        the arguments in case they weren't consumed already
@@ -177,18 +179,15 @@ So now we find ourselves back in the `call_function` routine after returning the
 
 Following this we execute the remaining opcodes after resetting the `stack_pointer` in `ceval.c` to the one returned to us by the reference passing in `call_function`. The remaining opcodes are fairly straight forward and not particularly interesting when it comes to function calls. We store our result onto the value stack, print out the value, load nothing onto the value stack and exit the frame!
 
-Python interpreter evaluates frame, which is something sort of like a instanciated function.
-Function always have a code part in it. 
-
 Extended Discussion: PyFrameObject vs PyFunctionObject vs PyCodeObject
 ======================================================================
 
-First of all, all three of these are PyObjects. They are closely related to each other. 
+First of all, all three of these are PyObjects and are closely related to each other. 
 Function is Code plus some closure, and Frame is the runtime instance of a function.
-What really gets executed at the end, is the Frame. Function is like a schema of 
-Frame, and Frame is the instantiated version of Function.
+What really gets executed at the end, is the Frame. A Function is like a schema for a
+Frame, and a Frame is an instantiated version of a Function.
 
-The most fundamental building block is the Code.
+The most fundamental building block is the Code Object.
 It looks like this:
 ```C
 /* Bytecode object */
@@ -201,12 +200,12 @@ typedef struct {
     ...                     //Some other stuff
 } PyCodeObject;
 ```
-Code in the source code is represented by this PyCodeObject. 
+A Code Object in the source code is represented by this PyCodeObject. 
 Notice that to the PyCodeObject’s knowledge, there is nothing like global nor closure. All it knows at 
 the moment is its local variables, even these local ones are not yet bound to some value, they are 
 just symbols.
 
-The interesting part here is the `PyCodeObject.co_code`, which, in our case,is the actual byte code
+The interesting part here is the `PyCodeObject.co_code`, which, in our case is the actual byte code
 of the add function. More precisely, the `co_varnames` are local symbols ( not necessaraly bound ).
 In our case are `x` and `y`. 
 
@@ -217,10 +216,10 @@ In our case are `x` and `y`.
           7 RETURN_VALUE
 ```
 
-The concept of Function builds upon the concept of Code. It is equivalently Code plus the context
+The concept of a Function Object builds upon the concept of a Code Object. It is equivalently a Code Object plus the context
 in which it is created. By context, I really mean `func_closure` and `func_globals`. Notice though, 
 if we do not write nested `def some_function_name():` in the source, the `func_closure` is simply `NULL`.
-However, when we have nested function and have function as return value, we will then invoke `MAKE_CLOSURE`
+However, when we have nested functions or have a function as a return value, we will then invoke `MAKE_CLOSURE`
 to set the `func_closure` so as to remember the context in which the returned function is created. 
 
 For instance, here is a block of code where the `fun` inside `f_factory` is returned, the `fun` here 
@@ -266,8 +265,7 @@ typedef struct {
 } PyFunctionObject;
 ```
 
-Notice that here, `PyFunctionObject.func_global` kicks in. Function knows what the global is to some Code. Code itself 
-does not need to worry about its globals.  
+Notice that here, `PyFunctionObject.func_global` kicks in. A Function Object knows what the global space is for some Code Object. Code Objects themselves need not worry about its globals.  
 
 Frame is pretty much like the Functions and their contexts all together as a whole that gets executed by the Python VM. 
 
