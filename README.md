@@ -61,7 +61,7 @@ At the moment of calling the function:
              23 LOAD_CONST               3 (None)
              26 RETURN_VALUE
 ```
-The Python interpreter loads the function name ( in our case `add` ) and two argumeents ( in our case `1` and `2` ) to 
+The Python interpreter loads the function name ( in our case `add` ) and two arguments ( in our case `1` and `2` ) to 
 the value satck. 
 
 Then the interpreter follows `CALL_FUNCTION` to make a `PyFrameObject` out of the `PyFunctionObject` with the name `add` 
