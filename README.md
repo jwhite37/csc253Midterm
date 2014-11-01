@@ -183,11 +183,10 @@ Extended Discussion: PyFrameObject vs PyFunctionObject vs PyCodeObject
 ======================================================================
 
 First of all, all three of these are PyObjects and are closely related to each other. 
-Function is Code plus some closure, and Frame is the runtime instance of a function.
-What really gets executed at the end, is the Frame. A Function is like a schema for a
-Frame, and a Frame is an instantiated version of a Function.
+PyFunctionObject is PyCodeObject plus some closure, and PyFrameObject is the runtime instance of a function.
+What really gets executed at the end, is the PyFrameObject. 
 
-The most fundamental building block is the Code Object.
+The most fundamental building block is the PyCodeObject.
 It looks like this:
 ```C
 /* Bytecode object */
@@ -200,23 +199,15 @@ typedef struct {
     ...                     //Some other stuff
 } PyCodeObject;
 ```
-A Code Object in the source code is represented by this PyCodeObject. 
 Notice that to the PyCodeObject’s knowledge, there is nothing like global nor closure. All it knows at 
 the moment is its local variables, even these local ones are not yet bound to some value, they are 
 just symbols.
 
 The interesting part here is the `PyCodeObject.co_code`, which, in our case is the actual byte code
-of the add function. More precisely, the `co_varnames` are local symbols ( not necessaraly bound ).
+of the `add` function. More precisely, the `co_varnames` are local symbols ( not necessaraly bound ).
 In our case are `x` and `y`. 
 
-```python
-          0 LOAD_FAST           0 (0)
-          3 LOAD_FAST           1 (1)
-          6 BINARY_ADD
-          7 RETURN_VALUE
-```
-
-The concept of a Function Object builds upon the concept of a Code Object. It is equivalently a Code Object plus the context
+The concept of a PyFunctionObject builds upon the concept of a PyCodeObject. It is equivalently a CodeObject plus the context
 in which it is created. By context, I really mean `func_closure` and `func_globals`. Notice though, 
 if we do not write nested `def some_function_name():` in the source, the `func_closure` is simply `NULL`.
 However, when we have nested functions or have a function as a return value, we will then invoke `MAKE_CLOSURE`
@@ -241,7 +232,7 @@ print x(), y()
 ```
 
 Therefore, please remember that:
-`Function = Code + func_closure + func_global`
+`function = code + func_closure + func_global`
 
 It looks like this:
 ```C
@@ -249,24 +240,14 @@ typedef struct {
     PyObject_HEAD
     PyObject *func_code;	/* A code object */
     PyObject *func_globals;	/* A dictionary (other mappings won't do) */
-    PyObject *func_defaults;	/* NULL or a tuple */
+    ...
     PyObject *func_closure;	/* NULL or a tuple of cell objects */
-    PyObject *func_doc;		/* The __doc__ attribute, can be anything */
-    PyObject *func_name;	/* The __name__ attribute, a string object */
-    PyObject *func_dict;	/* The __dict__ attribute, a dict or NULL */
-    PyObject *func_weakreflist;	/* List of weak references */
-    PyObject *func_module;	/* The __module__ attribute, can be anything */
-
-    /* Invariant:
-     *     func_closure contains the bindings for func_code->co_freevars, so
-     *     PyTuple_Size(func_closure) == PyCode_GetNumFree(func_code)
-     *     (func_closure may be NULL if PyCode_GetNumFree(func_code) == 0).
-     */
+    ...
 } PyFunctionObject;
 ```
 
 Notice that here, `PyFunctionObject.func_global` kicks in. A Function Object knows what the global space is for some Code Object. Code Objects themselves need not worry about its globals.  
 
-Frame is pretty much like the Functions and their contexts all together as a whole that gets executed by the Python VM. 
+PyFrameObject is pretty much like the Functions and their contexts all together as a whole that gets executed by the Python VM. 
 
 
